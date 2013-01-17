@@ -59,7 +59,7 @@ parser.add_argument("-u", "--username", dest="restUser", type=str, help="usernam
 parser.add_argument("-p", "--password", dest="restPass", type=str, help="password must be specified")
 
 parser.add_argument("-P", "--project", dest="inputProject", default="HCP_Phase2", type=str, help="specify project")
-parser.add_argument("-S", "--subject", dest="inputSubject", default="792564", type=str, help="specify subject of interest")
+parser.add_argument("-S", "--subject", dest="inputSubject", type=str, help="specify subject of interest")
 parser.add_argument("-E", "--experiment", dest="inputExperiment", default="strc", type=str, help="specify experiment type of interest")
 
 parser.add_argument("-D", "--destination_dir", dest="destDir", default='/tmp', type=str, help="specify the directory for output")
