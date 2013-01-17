@@ -141,6 +141,7 @@ root = etree.fromstring(r.text.encode(r.encoding))
 studyDate = root.find(".//" + xnatNS + "date").text
 print "Assuming study date of " + studyDate
 
+
 # Start with an empty series list
 seriesList = list()
 
