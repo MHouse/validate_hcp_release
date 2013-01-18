@@ -26,25 +26,51 @@ xnatNS = "{http://nrg.wustl.edu/xnat}"
 class seriesDetails:
     """A simple class to store information about a scan series"""
     def __init__(self):
-        self.seriesNum = None
-        self.seriesQualityText = None
-        self.seriesQualityNumeric = None
-        self.seriesDescOrig = None
-        self.seriesDesc = None
-        self.niftiCount = None
-        self.seriesDate = None
-        self.isUnique = None
-        self.instanceNum = None
-        self.instanceName = None
-        self.instanceIncluded = None
-        self.fileList = None
-    def __repr__(self):
-        return "<seriesDetails seriesNum:%s seriesQualityText:%s seriesQualityNumeric:%s seriesDesc:%s niftiCount:%s seriesDate:%s>" \
-               % (self.seriesNum, self.seriesQualityText, self.seriesQualityNumeric, self.seriesDesc, self.niftiCount, self.seriesDate)
+        self.startTime = None
+        self.scan_ID = None
+        self.scan_type = None
+        self.series_description = None
+        self.quality = None
+        self.subjectSessionNum = None
+        self.releaseCountScan = None
+        self.targetForRelease = None
+        self.dbID = None
+        self.dbType = None
+        self.params_shimGroup = None
+        self.params_biasGroup = None
+        self.seFieldMapGroup = None
+        self.params_geFieldMapGroup = None
+        self.dbDesc = None
+        self.params_peRotation = None
+        self.params_peSwap = None
+        self.params_peDirection = None
+        self.params_eprimeScriptNum = None
+def __repr__(self):
+        return "<scan_ID:%s series_description:%s>" \
+               % (self.scan_ID, self.series_description)
 
 xmlFormat =  {'format': 'xml'}
 jsonFormat = {'format': 'json'}
-qualityDict = dict(unusable=0, poor=1, fair=2, good=3, excellent=4, usable=5, undetermined=6)
+seriesLabels = dict(
+    startTime = "Acquisition Time",
+    scan_ID = "IDB_scan",
+    scan_type = "IDB_Type",
+    series_description = "IDB_Description",
+    quality = "Usability",
+    subjectSessionNum = "Session",
+    releaseCountScan = "CountScan",
+    targetForRelease = "Release",
+    dbID = "CDB_scan",
+    dbType = "CDB_Type",
+    params_shimGroup = "Shim Group",
+    params_biasGroup = "BiasField group",
+    seFieldMapGroup = "SE_FieldMap group",
+    params_geFieldMapGroup = "GE_FieldMap group",
+    dbDesc = "CDB_Description",
+    params_peRotation = "PE Rotation",
+    params_peSwap = "PE swap",
+    params_peDirection = "PE direction",
+    params_eprimeScriptNum = "E-Prime Script" )
 
 #===============================================================================
 # PARSE INPUT
@@ -66,7 +92,7 @@ parser.add_argument("-D", "--destination_dir", dest="destDir", default='/tmp', t
 parser.add_argument("-l", "--list", dest="listOnly", default=False, action="store_true", help="only list files that would be retrieved")
 parser.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true", help="show more verbose output")
 
-parser.add_argument('--version', action='version', version='%(prog)s: v0.8')
+parser.add_argument('--version', action='version', version='%(prog)s: v0.1')
 
 args = parser.parse_args()
 
@@ -148,25 +174,46 @@ seriesList = list()
 for element in root.iterfind(".//" + xnatNS + "scan[@ID]"):
     # Create an empty seriesDetails record
     currentSeries = seriesDetails()
-    # Record the Series Number
-    currentSeries.seriesNum = int( element.get("ID") )
-    # Record the Series Description
-    currentSeries.seriesDesc = element.find(".//" + xnatNS + "series_description").text
-    # Also dump it into an 'original' field that will not be changed
-    currentSeries.seriesDescOrig = currentSeries.seriesDesc
-    # Record the Scan Quality
-    currentSeries.seriesQualityText = element.find(".//" + xnatNS + "quality").text
-    # Convert the Scan Quality to a numeric value and record it
-    #currentSeries.seriesQualityNumeric = QualityTextToNumeric(currentSeries.seriesQualityText)
-    currentSeries.seriesQualityNumeric = qualityDict.get( currentSeries.seriesQualityText, -1)
-    # Find the file record under the current element associated with NIFTI files
-    niftiElement = element.find(".//" + xnatNS + "file[@label='NIFTI']")
-    # Record the number of NIFTI files from the file record
-    currentSeries.niftiCount = int( niftiElement.get("file_count") )
-    # Extract the scan Start Time from the current Series record
-    startTime=element.find(".//" + xnatNS + "startTime").text
+    #startTime = "Acquisition Time",
+    currentSeries.startTime = element.findtext(".//" + xnatNS + "startTime")
+    #scan_ID = "IDB_scan",
+    currentSeries.scan_ID = int (element.get("ID") )
+    #scan_type = "IDB_Type",
+    currentSeries.scan_type = element.get("type")
+    #series_description = "IDB_Description",
+    currentSeries.series_description = element.findtext(".//" + xnatNS + "series_description")
+    #quality = "Usability",
+    currentSeries.quality = element.findtext(".//" + xnatNS + "quality")
+    #subjectSessionNum = "Session",
+    currentSeries.subjectSessionNum = element.findtext(".//" + xnatNS + "subjectSessionNum")
+    #releaseCountScan = "CountScan",
+    currentSeries.releaseCountScan = element.findtext(".//" + xnatNS + "releaseCountScan")
+    #targetForRelease = "Release",
+    currentSeries.targetForRelease = element.findtext(".//" + xnatNS + "targetForRelease")
+    #dbID = "CDB_scan",
+    currentSeries.dbID = element.findtext(".//" + xnatNS + "dbID")
+    #dbType = "CDB_Type",
+    currentSeries.dbType = element.findtext(".//" + xnatNS + "dbType")
+    #params_shimGroup = "Shim Group",
+    currentSeries.params_shimGroup = element.findtext(".//" + xnatNS + "shimGroup")
+    #params_biasGroup = "BiasField group",
+    currentSeries.params_biasGroup = element.findtext(".//" + xnatNS + "biasGroup")
+    #seFieldMapGroup = "SE_FieldMap group",
+    currentSeries.seFieldMapGroup = element.findtext(".//" + xnatNS + "seFieldMapGroup")
+    #params_geFieldMapGroup = "GE_FieldMap group",
+    currentSeries.params_biasGroup = element.findtext(".//" + xnatNS + "biasGroup")
+    #dbDesc = "CDB_Description",
+    currentSeries.dbDesc = element.findtext(".//" + xnatNS + "dbDesc")
+    #params_peRotation = "PE Rotation",
+    currentSeries.params_peRotation = element.findtext(".//" + xnatNS + "peRotation")
+    #params_peSwap = "PE swap",
+    currentSeries.params_peSwap = element.findtext(".//" + xnatNS + "peSwap")
+    #params_peDirection = "PE direction",
+    currentSeries.params_peDirection = element.findtext(".//" + xnatNS + "peDirection")
+    #params_eprimeScriptNum = "E-Prime Script"
+    currentSeries.params_eprimeScriptNum = element.findtext(".//" + xnatNS + "eprimeScriptNum")
     # Record the series Date and Time in
-    currentSeries.seriesDate = datetime.strptime(studyDate + " " + startTime, "%Y-%m-%d %H:%M:%S")
+    #currentSeries.seriesDate = datetime.strptime(studyDate + " " + startTime, "%Y-%m-%d %H:%M:%S")
     # Add the current series to the end of the list
     seriesList.append(currentSeries)
 
