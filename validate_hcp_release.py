@@ -2,10 +2,7 @@
 __author__ = 'mhouse01'
 
 import requests
-import re
-import urllib2
 import json
-import shutil
 import os
 from datetime import datetime
 from lxml import etree
@@ -25,6 +22,7 @@ xnatNS = "{http://nrg.wustl.edu/xnat}"
 xmlFormat =  {'format': 'xml'}
 jsonFormat = {'format': 'json'}
 csvOrder = [
+    'sessionDay',
     'startTime',
     'scan_ID',
     'scan_type',
@@ -35,6 +33,7 @@ csvOrder = [
     'targetForRelease',
     'dbID',
     'dbType',
+    'viewScan',
     'params_shimGroup',
     'params_biasGroup',
     'seFieldMapGroup',
@@ -43,8 +42,12 @@ csvOrder = [
     'params_peRotation',
     'params_peSwap',
     'params_peDirection',
-    'params_eprimeScriptNum' ]
+    'params_readoutDirection',
+    'params_eprimeScriptNum',
+    'scanOrder' ]
+
 seriesLabels = dict(
+    sessionDay = "Session Day",
     startTime = "Acquisition Time",
     scan_ID = "IDB_scan",
     scan_type = "IDB_Type",
@@ -55,19 +58,32 @@ seriesLabels = dict(
     targetForRelease = "Release",
     dbID = "CDB_scan",
     dbType = "CDB_Type",
+    viewScan = "View",
     params_shimGroup = "Shim Group",
     params_biasGroup = "BiasField group",
     seFieldMapGroup = "SE_FieldMap group",
     params_geFieldMapGroup = "GE_FieldMap group",
     dbDesc = "CDB_Description",
     params_peRotation = "PE Rotation",
-    params_peSwap = "PE swap",
-    params_peDirection = "PE direction",
-    params_eprimeScriptNum = "E-Prime Script" )
+    params_peSwap = "PE Swap",
+    params_peDirection = "PE Direction",
+    params_readoutDirection = "Readout Direction",
+    params_eprimeScriptNum = "E-Prime Script",
+    scanOrder = "Scan Order" )
+
+def numberToYN( numberYN ):
+    textYN = None
+    if numberYN is not None:
+        if int(numberYN) == 0:
+            textYN = 'N'
+        else:
+            textYN = 'Y'
+    return textYN
 
 class seriesDetails:
     """A simple class to store information about a scan series"""
     def __init__(self):
+        self.sessionDay = None
         self.startTime = None
         self.scan_ID = None
         self.scan_type = None
@@ -78,6 +94,7 @@ class seriesDetails:
         self.targetForRelease = None
         self.dbID = None
         self.dbType = None
+        self.viewScan = None
         self.params_shimGroup = None
         self.params_biasGroup = None
         self.seFieldMapGroup = None
@@ -86,11 +103,14 @@ class seriesDetails:
         self.params_peRotation = None
         self.params_peSwap = None
         self.params_peDirection = None
+        self.params_readoutDirection = None
         self.params_eprimeScriptNum = None
+        self.scanOrder = None
     def __repr__(self):
         return "<scan_ID:%s series_description:%s>" % (self.scan_ID, self.series_description)
     def asDictionary(self):
         detailsDict = dict(
+            sessionDay = self.sessionDay,
             startTime = self.startTime,
             scan_ID = self.scan_ID,
             scan_type = self.scan_type,
@@ -101,6 +121,7 @@ class seriesDetails:
             targetForRelease = self.targetForRelease,
             dbID = self.dbID,
             dbType = self.dbType,
+            viewScan = self.viewScan,
             params_shimGroup = self.params_shimGroup,
             params_biasGroup = self.params_biasGroup,
             seFieldMapGroup = self.seFieldMapGroup,
@@ -109,7 +130,30 @@ class seriesDetails:
             params_peRotation = self.params_peRotation,
             params_peSwap = self.params_peSwap,
             params_peDirection = self.params_peDirection,
-            params_eprimeScriptNum = self.params_eprimeScriptNum )
+            params_readoutDirection = self.params_readoutDirection,
+            params_eprimeScriptNum = self.params_eprimeScriptNum,
+            scanOrder = self.scanOrder )
+        # Handle some additional formatting
+        if detailsDict.get('quality') == "usable":
+            detailsDict['quality'] = None
+        # Convert the CountScan field to Y/N
+        detailsDict['releaseCountScan'] = numberToYN( detailsDict.get('releaseCountScan') )
+        # If the scan is counted, Convert the Release field to Y/N
+        if detailsDict['releaseCountScan'] == 'N':
+            detailsDict['targetForRelease'] = None
+        else:
+            detailsDict['targetForRelease'] = numberToYN( detailsDict.get('targetForRelease') )
+        # If the scan is targeted for release, Convert the View field to Y/N
+        if detailsDict['targetForRelease'] == 'N':
+            detailsDict['viewScan'] = None
+        else:
+            detailsDict['viewScan'] = numberToYN( detailsDict.get('viewScan') )
+        # Append a single-quote to the PE Direction field if it is present because it starts with a +/-
+        if detailsDict['params_peDirection'] is not None:
+            detailsDict['params_peDirection'] = "\'" + detailsDict['params_peDirection']
+        # Append a single-quote to the Readout Direction field if it is present because it starts with a +/-
+        if detailsDict['params_readoutDirection'] is not None:
+            detailsDict['params_readoutDirection'] = "\'" + detailsDict['params_readoutDirection']
         return detailsDict
 
 #===============================================================================
@@ -242,6 +286,8 @@ for experiment in experimentResults:
     for element in root.iterfind(".//" + xnatNS + "scan[@ID]"):
         # Create an empty seriesDetails record
         currentSeries = seriesDetails()
+        #sessionDay = "Session Day",
+        currentSeries.sessionDay = element.findtext(".//" + xnatNS + "sessionDay")
         #startTime = "Acquisition Time",
         currentSeries.startTime = element.findtext(".//" + xnatNS + "startTime")
         #scan_ID = "IDB_scan",
@@ -260,6 +306,8 @@ for experiment in experimentResults:
         currentSeries.targetForRelease = element.findtext(".//" + xnatNS + "targetForRelease")
         #dbID = "CDB_scan",
         currentSeries.dbID = element.findtext(".//" + xnatNS + "dbID")
+        #viewScan = "View",
+        currentSeries.viewScan = element.findtext(".//" + xnatNS + "viewScan")
         #dbType = "CDB_Type",
         currentSeries.dbType = element.findtext(".//" + xnatNS + "dbType")
         #params_shimGroup = "Shim Group",
@@ -274,12 +322,16 @@ for experiment in experimentResults:
         currentSeries.dbDesc = element.findtext(".//" + xnatNS + "dbDesc")
         #params_peRotation = "PE Rotation",
         currentSeries.params_peRotation = element.findtext(".//" + xnatNS + "peRotation")
-        #params_peSwap = "PE swap",
+        #params_peSwap = "PE Swap",
         currentSeries.params_peSwap = element.findtext(".//" + xnatNS + "peSwap")
-        #params_peDirection = "PE direction",
+        #params_peDirection = "PE Direction",
         currentSeries.params_peDirection = element.findtext(".//" + xnatNS + "peDirection")
+        #params_peDirection = "Readout Direction",
+        currentSeries.params_readoutDirection = element.findtext(".//" + xnatNS + "readoutDirection")
         #params_eprimeScriptNum = "E-Prime Script"
         currentSeries.params_eprimeScriptNum = element.findtext(".//" + xnatNS + "eprimeScriptNum")
+        #scanOrder = "Scan Order"
+        currentSeries.scanOrder = element.findtext(".//" + xnatNS + "scanOrder")
         # Record the series Date and Time in
         #currentSeries.seriesDate = datetime.strptime(studyDate + " " + startTime, "%Y-%m-%d %H:%M:%S")
         # Add the current series to the end of the list
@@ -288,16 +340,20 @@ for experiment in experimentResults:
     experiment['seriesList'] = seriesList
 
 
+
 import csv
-with open('some.csv', 'wb') as f:
-    writer = csv.DictWriter( f, csvOrder )
-    writer.writerow( seriesLabels )
+csvFile = subject + ".csv"
+seriesNotes = seriesDetails()
+with open( csvFile, 'wb' ) as f:
+    csvWriter = csv.DictWriter( f, csvOrder )
+    csvWriter.writerow( seriesLabels )
     # Loop over all experiment results
     for experiment in experimentResults:
-        #writer.writerow( experiment['label'] )
+        seriesNotes.scan_ID = experiment['label']
+        csvWriter.writerow( seriesNotes.asDictionary() )
         # Loop over all scans in each experiment
         for scan in experiment['seriesList']:
-            writer.writerow( scan.asDictionary() )
+            csvWriter.writerow( scan.asDictionary() )
 
 
 print
