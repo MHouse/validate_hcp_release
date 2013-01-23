@@ -1,0 +1,190 @@
+__author__ = 'mhouse01'
+
+#import lxml
+xnatNS = "{http://nrg.wustl.edu/xnat}"
+
+def numberToYN( numberYN ):
+    textYN = None
+    if numberYN is not None:
+        if int(numberYN) == 0:
+            textYN = 'N'
+        else:
+            textYN = 'Y'
+    return textYN
+
+class seriesDetails:
+    """A simple class to store information about a scan series"""
+    def __init__(self):
+        self.sessionDay = None
+        self.startTime = None
+        self.scan_ID = None
+        self.scan_type = None
+        self.series_description = None
+        self.quality = None
+        self.subjectSessionNum = None
+        self.releaseCountScan = None
+        self.targetForRelease = None
+        self.dbID = None
+        self.dbType = None
+        self.viewScan = None
+        self.params_shimGroup = None
+        self.params_biasGroup = None
+        self.seFieldMapGroup = None
+        self.params_geFieldMapGroup = None
+        self.dbDesc = None
+        self.params_peRotation = None
+        self.params_peSwap = None
+        self.params_peDirection = None
+        self.params_readoutDirection = None
+        self.params_eprimeScriptNum = None
+        self.scanOrder = None
+
+    def __repr__(self):
+        return "<scan_ID:%s series_description:%s>" % (self.scan_ID, self.series_description)
+
+    def fromScanXML(self, element):
+        #sessionDay = "Session Day",
+        self.sessionDay = element.findtext(".//" + xnatNS + "sessionDay")
+        #startTime = "Acquisition Time",
+        self.startTime = element.findtext(".//" + xnatNS + "startTime")
+        #scan_ID = "IDB_scan",
+        self.scan_ID = int (element.get("ID") )
+        #scan_type = "IDB_Type",
+        self.scan_type = element.get("type")
+        #series_description = "IDB_Description",
+        self.series_description = element.findtext(".//" + xnatNS + "series_description")
+        #quality = "Usability",
+        self.quality = element.findtext(".//" + xnatNS + "quality")
+        #subjectSessionNum = "Session",
+        self.subjectSessionNum = element.findtext(".//" + xnatNS + "subjectSessionNum")
+        #releaseCountScan = "CountScan",
+        self.releaseCountScan = element.findtext(".//" + xnatNS + "releaseCountScan")
+        #targetForRelease = "Release",
+        self.targetForRelease = element.findtext(".//" + xnatNS + "targetForRelease")
+        #dbID = "CDB_scan",
+        self.dbID = element.findtext(".//" + xnatNS + "dbID")
+        #viewScan = "View",
+        self.viewScan = element.findtext(".//" + xnatNS + "viewScan")
+        #dbType = "CDB_Type",
+        self.dbType = element.findtext(".//" + xnatNS + "dbType")
+        #params_shimGroup = "Shim Group",
+        self.params_shimGroup = element.findtext(".//" + xnatNS + "shimGroup")
+        #params_biasGroup = "BiasField group",
+        self.params_biasGroup = element.findtext(".//" + xnatNS + "biasGroup")
+        #seFieldMapGroup = "SE_FieldMap group",
+        self.seFieldMapGroup = element.findtext(".//" + xnatNS + "seFieldMapGroup")
+        #params_geFieldMapGroup = "GE_FieldMap group",
+        self.params_biasGroup = element.findtext(".//" + xnatNS + "biasGroup")
+        #dbDesc = "CDB_Description",
+        self.dbDesc = element.findtext(".//" + xnatNS + "dbDesc")
+        #params_peRotation = "PE Rotation",
+        self.params_peRotation = element.findtext(".//" + xnatNS + "peRotation")
+        #params_peSwap = "PE Swap",
+        self.params_peSwap = element.findtext(".//" + xnatNS + "peSwap")
+        #params_peDirection = "PE Direction",
+        self.params_peDirection = element.findtext(".//" + xnatNS + "peDirection")
+        #params_peDirection = "Readout Direction",
+        self.params_readoutDirection = element.findtext(".//" + xnatNS + "readoutDirection")
+        #params_eprimeScriptNum = "E-Prime Script"
+        self.params_eprimeScriptNum = element.findtext(".//" + xnatNS + "eprimeScriptNum")
+        #scanOrder = "Scan Order"
+        self.scanOrder = element.findtext(".//" + xnatNS + "scanOrder")
+
+    def asDictionary(self):
+        detailsDict = dict(
+            sessionDay = self.sessionDay,
+            startTime = self.startTime,
+            scan_ID = self.scan_ID,
+            scan_type = self.scan_type,
+            series_description = self.series_description,
+            quality = self.quality,
+            subjectSessionNum = self.subjectSessionNum,
+            releaseCountScan = self.releaseCountScan,
+            targetForRelease = self.targetForRelease,
+            dbID = self.dbID,
+            dbType = self.dbType,
+            viewScan = self.viewScan,
+            params_shimGroup = self.params_shimGroup,
+            params_biasGroup = self.params_biasGroup,
+            seFieldMapGroup = self.seFieldMapGroup,
+            params_geFieldMapGroup = self.params_geFieldMapGroup,
+            dbDesc = self.dbDesc,
+            params_peRotation = self.params_peRotation,
+            params_peSwap = self.params_peSwap,
+            params_peDirection = self.params_peDirection,
+            params_readoutDirection = self.params_readoutDirection,
+            params_eprimeScriptNum = self.params_eprimeScriptNum,
+            scanOrder = self.scanOrder )
+        # Handle some additional formatting
+        if detailsDict.get('quality') == "usable":
+            detailsDict['quality'] = None
+        # Convert the CountScan field to Y/N
+        detailsDict['releaseCountScan'] = numberToYN( detailsDict.get('releaseCountScan') )
+        # If the scan is counted, Convert the Release field to Y/N
+        if detailsDict['releaseCountScan'] == 'N':
+            detailsDict['targetForRelease'] = None
+        else:
+            detailsDict['targetForRelease'] = numberToYN( detailsDict.get('targetForRelease') )
+        # If the scan is targeted for release, Convert the View field to Y/N
+        if detailsDict['targetForRelease'] == 'N':
+            detailsDict['viewScan'] = None
+        else:
+            detailsDict['viewScan'] = numberToYN( detailsDict.get('viewScan') )
+        # Append a single-quote to the PE Direction field if it is present because it starts with a +/-
+        if detailsDict['params_peDirection'] is not None:
+            detailsDict['params_peDirection'] = "\'" + detailsDict['params_peDirection']
+        # Append a single-quote to the Readout Direction field if it is present because it starts with a +/-
+        if detailsDict['params_readoutDirection'] is not None:
+            detailsDict['params_readoutDirection'] = "\'" + detailsDict['params_readoutDirection']
+        # Return the newly created/formatted Dictionary object
+        return detailsDict
+
+csvOrder = [
+    'sessionDay',
+    'startTime',
+    'scan_ID',
+    'scan_type',
+    'series_description',
+    'quality',
+    'subjectSessionNum',
+    'releaseCountScan',
+    'targetForRelease',
+    'dbID',
+    'dbType',
+    'viewScan',
+    'params_shimGroup',
+    'params_biasGroup',
+    'seFieldMapGroup',
+    'params_geFieldMapGroup',
+    'dbDesc',
+    'params_peRotation',
+    'params_peSwap',
+    'params_peDirection',
+    'params_readoutDirection',
+    'params_eprimeScriptNum',
+    'scanOrder' ]
+
+seriesLabels = dict(
+    sessionDay = "Session Day",
+    startTime = "Acquisition Time",
+    scan_ID = "IDB_scan",
+    scan_type = "IDB_Type",
+    series_description = "IDB_Description",
+    quality = "Usability",
+    subjectSessionNum = "Session",
+    releaseCountScan = "CountScan",
+    targetForRelease = "Release",
+    dbID = "CDB_scan",
+    dbType = "CDB_Type",
+    viewScan = "View",
+    params_shimGroup = "Shim Group",
+    params_biasGroup = "BiasField group",
+    seFieldMapGroup = "SE_FieldMap group",
+    params_geFieldMapGroup = "GE_FieldMap group",
+    dbDesc = "CDB_Description",
+    params_peRotation = "PE Rotation",
+    params_peSwap = "PE Swap",
+    params_peDirection = "PE Direction",
+    params_readoutDirection = "Readout Direction",
+    params_eprimeScriptNum = "E-Prime Script",
+    scanOrder = "Scan Order" )
