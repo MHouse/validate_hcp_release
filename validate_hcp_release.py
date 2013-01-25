@@ -31,46 +31,39 @@ parser.add_argument("-i", "--insecure", dest="restSecurity", default=True, actio
 parser.add_argument("-c", "--config", dest="configFile", default="validate_hcp_release.cfg", type=str, help="config file must be specified")
 parser.add_argument("-u", "--username", dest="restUser", type=str, help="username must be specified")
 parser.add_argument("-p", "--password", dest="restPass", type=str, help="password must be specified")
-parser.add_argument("-P", "--project", dest="inputProject", default="HCP_Phase2", type=str, help="specify project")
-parser.add_argument("-S", "--subject", dest="inputSubject", type=str, help="specify subject of interest")
+parser.add_argument("-P", "--project", dest="Project", default="HCP_Phase2", type=str, help="specify project")
+parser.add_argument("-S", "--subject", dest="Subject", type=str, help="specify subject of interest")
 parser.add_argument("-D", "--destination_dir", dest="destDir", default='/tmp', type=str, help="specify the directory for output")
 parser.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true", help="show more verbose output")
-
 parser.add_argument('--version', action='version', version='%(prog)s: v0.1')
 
 args = parser.parse_args()
+args.destDir = os.path.normpath( args.destDir )
 
-restServerName = args.restServerName
-restSecurity = args.restSecurity
+#restServerName = args.restServerName
+#restSecurity = args.restSecurity
 # TODO Need to switch back to command line arguments
-configFile = args.configFile
+
 username = importUsername
 #username = args.restUser
 password = importPassword
 #password = args.restPass
-project = args.inputProject
-subject = args.inputSubject
-destDir = os.path.normpath( args.destDir )
-verbose = args.verbose
 
-restInsecureRoot = "http://" + restServerName + ":8080"
-restSecureRoot = "https://" + restServerName
-
-if restSecurity:
+if args.restSecurity:
     print "Using only secure connections"
-    restSelectedRoot = restSecureRoot
+    restRoot = "https://" + args.restServerName
 else:
     print "Security turned off for all connections"
-    restSelectedRoot = restInsecureRoot
+    restRoot = "http://" + args.restServerName + ":8080"
 
 # If we find an OS certificate bundle, use it instead of the built-in bundle
-if requests.utils.get_os_ca_bundle_path() and restSecurity:
+if requests.utils.get_os_ca_bundle_path() and args.restSecurity:
     os.environ['REQUESTS_CA_BUNDLE'] = requests.utils.get_os_ca_bundle_path()
     print "Using CA Bundle: %s" % requests.utils.DEFAULT_CA_BUNDLE_PATH
 
 # Establish a Session ID
 try:
-    r = requests.get( restSelectedRoot + "/data/JSESSION", auth=(username, password) )
+    r = requests.get( restRoot + "/data/JSESSION", auth=(username, password) )
     # If we don't get an OK; code: requests.codes.ok
     r.raise_for_status()
 # Check if the REST Request fails
@@ -86,7 +79,7 @@ mrSessions = {"xsiType": "xnat:mrSessionData"}
 
 # Get the list of MR Sessions for each Experiment
 # Create a URL pointing to the Experiments for this Subject
-restExperimentsURL = restSelectedRoot + "/data/archive/projects/" + project + "/subjects/" + subject + "/experiments/"
+restExperimentsURL = restRoot + "/data/archive/projects/" + args.Project + "/subjects/" + args.Subject + "/experiments/"
 # Get the list of MR Sessions for the Subject in JSON format
 try:
     # Create a dictionary of parameters for the rest call
@@ -123,7 +116,7 @@ for experiment in experimentResults:
     except (requests.Timeout) as e:
         print "Timed out while attempting to retrieve XML:"
         print "    " + str( e )
-        if not restSecurity:
+        if not args.restSecurity:
             print "Note that insecure connections are only allowed locally"
         exit(1)
     # Check if the REST Request fails
@@ -151,7 +144,7 @@ for experiment in experimentResults:
     experiment['seriesList'] = seriesList
 
 # Name the CSV file by the Subject name
-csvFile = subject + ".csv"
+csvFile = args.destDir + args.Subject + ".csv"
 # Create an empty Series Notes object.  This can be populated with field specific notes for each Experiment
 seriesNotes = seriesDetails()
 # Open the CSV file for write/binary

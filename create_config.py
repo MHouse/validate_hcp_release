@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 __author__ = 'mhouse01'
 import ConfigParser
 
@@ -18,7 +19,6 @@ config.add_section('Server')
 config.set('Server', 'server', 'server.domain.org')
 config.set('Server', 'insecure', 'false')
 
-
-# Writing our configuration file to 'example.cfg'
+# Writing our configuration file to 'validate_hcp_release.cfg'
 with open('validate_hcp_release.cfg', 'wb') as configfile:
     config.write( configfile )
