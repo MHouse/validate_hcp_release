@@ -144,7 +144,7 @@ for experiment in experimentResults:
     experiment['seriesList'] = seriesList
 
 # Name the CSV file by the Subject name
-csvFile = args.destDir + args.Subject + ".csv"
+csvFile = args.destDir + os.sep + args.Subject + ".csv"
 # Create an empty Series Notes object.  This can be populated with field specific notes for each Experiment
 seriesNotes = seriesDetails()
 # Open the CSV file for write/binary
