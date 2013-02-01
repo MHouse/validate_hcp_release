@@ -1,6 +1,7 @@
 __author__ = 'mhouse01'
 
-#import lxml
+import lxml
+from datetime import datetime
 xnatNS = "{http://nrg.wustl.edu/xnat}"
 
 def numberToYN( numberYN ):
@@ -16,7 +17,9 @@ class seriesDetails:
     """A simple class to store information about a scan series"""
     def __init__(self):
         self.sessionDay = None
+        self.sessionDate = None
         self.startTime = None
+        self.DateTime = None
         self.scan_ID = None
         self.scan_type = None
         self.series_description = None
@@ -32,13 +35,11 @@ class seriesDetails:
         self.seFieldMapGroup = None
         self.params_geFieldMapGroup = None
         self.dbDesc = None
-        self.params_peRotation = None
-        self.params_peSwap = None
         self.params_peDirection = None
         self.params_readoutDirection = None
         self.params_eprimeScriptNum = None
         self.scanOrder = None
-
+        self.scanComplete = None
     def __repr__(self):
         return "<scan_ID:%s series_description:%s>" % (self.scan_ID, self.series_description)
 
@@ -47,6 +48,8 @@ class seriesDetails:
         self.sessionDay = element.findtext(".//" + xnatNS + "sessionDay")
         #startTime = "Acquisition Time",
         self.startTime = element.findtext(".//" + xnatNS + "startTime")
+        #DateTime: Used only for sorting
+        self.DateTime = datetime.strptime(self.sessionDate + " " + self.startTime, "%Y-%m-%d %H:%M:%S")
         #scan_ID = "IDB_scan",
         self.scan_ID = int (element.get("ID") )
         #scan_type = "IDB_Type",
@@ -74,13 +77,9 @@ class seriesDetails:
         #seFieldMapGroup = "SE_FieldMap group",
         self.seFieldMapGroup = element.findtext(".//" + xnatNS + "seFieldMapGroup")
         #params_geFieldMapGroup = "GE_FieldMap group",
-        self.params_biasGroup = element.findtext(".//" + xnatNS + "biasGroup")
+        self.params_geFieldMapGroup = element.findtext(".//" + xnatNS + "geFieldMapGroup")
         #dbDesc = "CDB_Description",
         self.dbDesc = element.findtext(".//" + xnatNS + "dbDesc")
-        #params_peRotation = "PE Rotation",
-        self.params_peRotation = element.findtext(".//" + xnatNS + "peRotation")
-        #params_peSwap = "PE Swap",
-        self.params_peSwap = element.findtext(".//" + xnatNS + "peSwap")
         #params_peDirection = "PE Direction",
         self.params_peDirection = element.findtext(".//" + xnatNS + "peDirection")
         #params_peDirection = "Readout Direction",
@@ -89,6 +88,8 @@ class seriesDetails:
         self.params_eprimeScriptNum = element.findtext(".//" + xnatNS + "eprimeScriptNum")
         #scanOrder = "Scan Order"
         self.scanOrder = element.findtext(".//" + xnatNS + "scanOrder")
+        #scanOrder = "Scan Order"
+        self.scanComplete = element.findtext(".//" + xnatNS + "scanComplete")
 
     def asDictionary(self):
         detailsDict = dict(
@@ -109,14 +110,13 @@ class seriesDetails:
             seFieldMapGroup = self.seFieldMapGroup,
             params_geFieldMapGroup = self.params_geFieldMapGroup,
             dbDesc = self.dbDesc,
-            params_peRotation = self.params_peRotation,
-            params_peSwap = self.params_peSwap,
             params_peDirection = self.params_peDirection,
             params_readoutDirection = self.params_readoutDirection,
             params_eprimeScriptNum = self.params_eprimeScriptNum,
-            scanOrder = self.scanOrder )
+            scanOrder = self.scanOrder,
+            scanComplete = self.scanComplete )
         # Handle some additional formatting
-        if detailsDict.get('quality') == "usable":
+        if detailsDict.get('quality') == "usable" or detailsDict.get('quality') == "undetermined":
             detailsDict['quality'] = None
         # Convert the CountScan field to Y/N
         detailsDict['releaseCountScan'] = numberToYN( detailsDict.get('releaseCountScan') )
@@ -157,12 +157,11 @@ csvOrder = [
     'seFieldMapGroup',
     'params_geFieldMapGroup',
     'dbDesc',
-    'params_peRotation',
-    'params_peSwap',
     'params_peDirection',
     'params_readoutDirection',
     'params_eprimeScriptNum',
-    'scanOrder' ]
+    'scanOrder',
+    'scanComplete' ]
 
 seriesLabels = dict(
     sessionDay = "Session Day",
@@ -182,9 +181,8 @@ seriesLabels = dict(
     seFieldMapGroup = "SE_FieldMap group",
     params_geFieldMapGroup = "GE_FieldMap group",
     dbDesc = "CDB_Description",
-    params_peRotation = "PE Rotation",
-    params_peSwap = "PE Swap",
     params_peDirection = "PE Direction",
     params_readoutDirection = "Readout Direction",
     params_eprimeScriptNum = "E-Prime Script",
-    scanOrder = "Scan Order" )
+    scanOrder = "Scan Order",
+    scanComplete = "Scan Complete" )

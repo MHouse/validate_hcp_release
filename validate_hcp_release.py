@@ -4,9 +4,11 @@ __author__ = 'mhouse01'
 import requests
 import json
 import os
+from datetime import datetime
 import csv
 from lxml import etree
 from sys import exit
+from operator import itemgetter, attrgetter
 import argparse
 from seriesDetails import seriesDetails, csvOrder, seriesLabels
 # TODO Will be switching to 'ConfigParser' for config file
@@ -99,8 +101,10 @@ experimentJSON = json.loads( r.content )
 experimentResultsJSON = experimentJSON.get('ResultSet').get('Result')
 # List Comprehensions Rock!  http://docs.python.org/tutorial/datastructures.html
 # Create a stripped down version of the results with a new field for seriesList; Store it in the experimentResults object
-experimentResults = [ {'label': experimentItem.get('label').encode('ascii', 'ignore'), 'seriesList': None }
-                      for experimentItem in experimentResultsJSON ]
+experimentResults = [ {'label': experimentItem.get('label').encode('ascii', 'ignore'),
+                       'date':  experimentItem.get('date').encode('ascii', 'ignore'),
+                       'subjectSessionNum': None,
+                       'seriesList': None } for experimentItem in experimentResultsJSON ]
 
 # Loop over the MR Experiment Results
 for experiment in experimentResults:
@@ -113,7 +117,7 @@ for experiment in experimentResults:
         # If we don't get an OK; code: requests.codes.ok
         r.raise_for_status()
     # Check if the REST Request fails
-    except (requests.Timeout) as e:
+    except requests.Timeout as e:
         print "Timed out while attempting to retrieve XML:"
         print "    " + str( e )
         if not args.restSecurity:
@@ -127,8 +131,7 @@ for experiment in experimentResults:
     # Parse the XML result into an Element Tree
     root = etree.fromstring(r.text.encode(r.encoding))
     # Extract the Study Date for the session
-    studyDate = root.find(".//" + xnatNS + "date").text
-    print "Assuming study date of " + studyDate
+    print "Assuming study date of " + experiment['date']
 
     # Start with an empty series list
     seriesList = list()
@@ -137,11 +140,19 @@ for experiment in experimentResults:
     for element in root.iterfind(".//" + xnatNS + "scan[@ID]"):
         # Create an empty seriesDetails record
         currentSeries = seriesDetails()
+        currentSeries.sessionDate = experiment['date']
         currentSeries.fromScanXML( element )
         # Add the current series to the end of the list
         seriesList.append( currentSeries )
+    # Sort the series list by DateTime
+    seriesList.sort( key=attrgetter('DateTime') )
+    # Store the subjectSessionNum extracted from the first item (first acquired scan) in the sorted list
+    experiment['subjectSessionNum'] = iter(seriesList).next().subjectSessionNum
     # Store the series list along with the experiment label
     experiment['seriesList'] = seriesList
+
+# Sort the Experiment Results list by the Subject Session Number
+experimentResults.sort( key=itemgetter('subjectSessionNum') )
 
 # Name the CSV file by the Subject name
 csvFile = args.destDir + os.sep + args.Subject + ".csv"
@@ -155,7 +166,8 @@ with open( csvFile, 'wb' ) as f:
     csvWriter.writerow( seriesLabels )
     # Loop over all experiment results
     for experiment in experimentResults:
-        # Populate the Series Notes for this Experiment with the Experiment Label
+        # Populate the Series Notes for this Experiment with the Experiment Date and Label
+        seriesNotes.startTime = experiment['date']
         seriesNotes.scan_ID = experiment['label']
         # Write out the notes
         csvWriter.writerow( seriesNotes.asDictionary() )
