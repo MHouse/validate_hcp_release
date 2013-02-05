@@ -17,9 +17,7 @@ xnatNS = "{http://nrg.wustl.edu/xnat}"
 xmlFormat =  {'format': 'xml'}
 jsonFormat = {'format': 'json'}
 
-#===============================================================================
 # PARSE INPUT
-#===============================================================================
 parser = argparse.ArgumentParser(description="Alpha program to pull Subject session parameters from XNAT for verification")
 
 parser.add_argument("-c", "--config", dest="configFile", default="validate_hcp_release.cfg", type=str, help="config file must be specified")
@@ -33,6 +31,7 @@ parser.add_argument('--version', action='version', version='%(prog)s: v0.1')
 args = parser.parse_args()
 args.destDir = os.path.normpath( args.destDir )
 
+# Read the config file
 config = ConfigParser.ConfigParser()
 try:
     config.read( args.configFile )
