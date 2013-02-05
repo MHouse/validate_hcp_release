@@ -5,6 +5,9 @@ import re
 from datetime import datetime
 xnatNS = "{http://nrg.wustl.edu/xnat}"
 
+def extractDict( d, keys ):
+    return dict( (k, d[k]) for k in keys if k in d )
+
 def numberToYN( numberYN ):
     textYN = None
     if numberYN is not None:
@@ -13,6 +16,24 @@ def numberToYN( numberYN ):
         else:
             textYN = 'Y'
     return textYN
+
+def scanIsPackage( scanName ):
+    if scanName is None:
+        return None
+    filterPackages = [
+        'rfMRI_REST\d+_(RL|LR)$',
+        'tfMRI_WM_(RL|LR)$',
+        'tfMRI_GAMBLING_(RL|LR)$',
+        'tfMRI_MOTOR_(RL|LR)$',
+        'tfMRI_LANGUAGE_(RL|LR)$',
+        'tfMRI_SOCIAL_(RL|LR)$',
+        'tfMRI_RELATIONAL_(RL|LR)$',
+        'tfMRI_EMOTION_(RL|LR)$' ]
+    # Create a regular expression search object
+    searchRegex = re.compile( '|'.join(filterPackages) )
+    # If the Series Name matches any of the Functional Package names
+    reMatch = re.search( searchRegex, scanName )
+    return reMatch
 
 class seriesDetails:
     """A simple class to store information about a scan series"""
@@ -144,34 +165,6 @@ class seriesDetails:
         # Extract a dictionary that matches the specified Output Mapping and return it
         return extractDict( detailsDict, csvOrder(outputMap) )
 
-def seriesLabels( outputMap ):
-    labelsDict = dict(
-        subjectName = "Subject Name",
-        sessionLabel = "Session Label",
-        sessionDay = "Session Day",
-        startTime = "Acquisition Time",
-        scan_ID = "IDB_scan",
-        scan_type = "IDB_Type",
-        series_description = "IDB_Description",
-        quality = "Usability",
-        subjectSessionNum = "Session",
-        releaseCountScan = "CountScan",
-        targetForRelease = "Release",
-        dbID = "CDB_scan",
-        dbType = "CDB_Type",
-        viewScan = "View",
-        params_shimGroup = "Shim Group",
-        params_biasGroup = "BiasField group",
-        seFieldMapGroup = "SE_FieldMap group",
-        params_geFieldMapGroup = "GE_FieldMap group",
-        dbDesc = "CDB_Description",
-        params_peDirection = "PE Direction",
-        params_readoutDirection = "Readout Direction",
-        params_eprimeScriptNum = "E-Prime Script",
-        scanOrder = "Scan Order",
-        scanComplete = "Scan Complete" )
-    return extractDict( labelsDict, csvOrder(outputMap) )
-
 def csvOrder( outputMap ):
     if outputMap == "all":
         order = [
@@ -223,24 +216,30 @@ def csvOrder( outputMap ):
         order = None
     return order
 
-def extractDict( d, keys ):
-    return dict( (k, d[k]) for k in keys if k in d )
-
-def scanIsPackage( scanName ):
-    if scanName is None:
-        return None
-    filterPackages = [
-        'rfMRI_REST\d+_(RL|LR)$',
-        'tfMRI_WM_(RL|LR)$',
-        'tfMRI_GAMBLING_(RL|LR)$',
-        'tfMRI_MOTOR_(RL|LR)$',
-        'tfMRI_LANGUAGE_(RL|LR)$',
-        'tfMRI_SOCIAL_(RL|LR)$',
-        'tfMRI_RELATIONAL_(RL|LR)$',
-        'tfMRI_EMOTION_(RL|LR)$' ]
-    # Create a regular expression search object
-    searchRegex = re.compile( '|'.join(filterPackages) )
-    # If the Series Name matches any of the Functional Package names
-    reMatch = re.search( searchRegex, scanName )
-    return reMatch
-
+def seriesLabels( outputMap ):
+    labelsDict = dict(
+        subjectName = "Subject Name",
+        sessionLabel = "Session Label",
+        sessionDay = "Session Day",
+        startTime = "Acquisition Time",
+        scan_ID = "IDB_scan",
+        scan_type = "IDB_Type",
+        series_description = "IDB_Description",
+        quality = "Usability",
+        subjectSessionNum = "Session",
+        releaseCountScan = "CountScan",
+        targetForRelease = "Release",
+        dbID = "CDB_scan",
+        dbType = "CDB_Type",
+        viewScan = "View",
+        params_shimGroup = "Shim Group",
+        params_biasGroup = "BiasField group",
+        seFieldMapGroup = "SE_FieldMap group",
+        params_geFieldMapGroup = "GE_FieldMap group",
+        dbDesc = "CDB_Description",
+        params_peDirection = "PE Direction",
+        params_readoutDirection = "Readout Direction",
+        params_eprimeScriptNum = "E-Prime Script",
+        scanOrder = "Scan Order",
+        scanComplete = "Scan Complete" )
+    return extractDict( labelsDict, csvOrder(outputMap) )

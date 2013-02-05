@@ -34,12 +34,16 @@ args = parser.parse_args()
 args.destDir = os.path.normpath( args.destDir )
 
 config = ConfigParser.ConfigParser()
-config.read( args.configFile )
-
-username = config.get('Credentials', 'username')
-password = config.get('Credentials', 'password')
-restServerName = config.get('Server', 'server')
-restSecurity = config.getboolean('Server', 'security')
+try:
+    config.read( args.configFile )
+    username = config.get('Credentials', 'username')
+    password = config.get('Credentials', 'password')
+    restServerName = config.get('Server', 'server')
+    restSecurity = config.getboolean('Server', 'security')
+except ConfigParser.Error as e:
+    print "Error reading configuration file:"
+    print "    " + str( e )
+    exit(1)
 
 if restSecurity:
     print "Using only secure connections"
@@ -156,7 +160,8 @@ with open( csvFile, 'wb' ) as f:
     # Create a CSV Writer for dictionary formatted objects.  Give it the Dictionary order for output.
     csvWriter = csv.DictWriter( f, csvOrder( args.outputMap ) )
     # Write out the series labels as a Header
-    csvWriter.writerow( seriesLabels(args.outputMap) )
+    if args.outputMap != "package":
+        csvWriter.writerow( seriesLabels(args.outputMap) )
     # Loop over all experiment results
     for experiment in experimentResults:
         # Populate the Series Notes for this Experiment with the Experiment Date and Label
