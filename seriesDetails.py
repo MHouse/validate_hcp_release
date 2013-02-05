@@ -1,6 +1,7 @@
 __author__ = 'mhouse01'
 
 import lxml
+import re
 from datetime import datetime
 xnatNS = "{http://nrg.wustl.edu/xnat}"
 
@@ -16,8 +17,9 @@ def numberToYN( numberYN ):
 class seriesDetails:
     """A simple class to store information about a scan series"""
     def __init__(self):
-        self.sessionDay = None
+        self.sessionLabel = None
         self.sessionDate = None
+        self.sessionDay = None
         self.startTime = None
         self.DateTime = None
         self.scan_ID = None
@@ -91,8 +93,9 @@ class seriesDetails:
         #scanOrder = "Scan Order"
         self.scanComplete = element.findtext(".//" + xnatNS + "scanComplete")
 
-    def asDictionary(self):
+    def asDictionary(self, outputMap = 'all'):
         detailsDict = dict(
+            sessionLabel = self.sessionLabel,
             sessionDay = self.sessionDay,
             startTime = self.startTime,
             scan_ID = self.scan_ID,
@@ -121,49 +124,103 @@ class seriesDetails:
         # Convert the CountScan field to Y/N
         detailsDict['releaseCountScan'] = numberToYN( detailsDict.get('releaseCountScan') )
         # If the scan is counted, Convert the Release field to Y/N
-        if detailsDict['releaseCountScan'] == 'N':
+        if detailsDict.get('releaseCountScan') == 'N':
             detailsDict['targetForRelease'] = None
         else:
             detailsDict['targetForRelease'] = numberToYN( detailsDict.get('targetForRelease') )
         # If the scan is targeted for release, Convert the View field to Y/N
-        if detailsDict['targetForRelease'] == 'N':
+        if detailsDict.get('targetForRelease') == 'N':
             detailsDict['viewScan'] = None
         else:
             detailsDict['viewScan'] = numberToYN( detailsDict.get('viewScan') )
         # Append a single-quote to the PE Direction field if it is present because it starts with a +/-
-        if detailsDict['params_peDirection'] is not None:
+        if detailsDict.get('params_peDirection') is not None:
             detailsDict['params_peDirection'] = "\'" + detailsDict['params_peDirection']
         # Append a single-quote to the Readout Direction field if it is present because it starts with a +/-
-        if detailsDict['params_readoutDirection'] is not None:
+        if detailsDict.get('params_readoutDirection') is not None:
             detailsDict['params_readoutDirection'] = "\'" + detailsDict['params_readoutDirection']
-        # Return the newly created/formatted Dictionary object
-        return detailsDict
+        # Extract a dictionary that matches the specified Output Mapping and return it
+        return extractDict( detailsDict, csvOrder(outputMap) )
 
-csvOrder = [
-    'sessionDay',
-    'startTime',
-    'scan_ID',
-    'scan_type',
-    'series_description',
-    'quality',
-    'subjectSessionNum',
-    'releaseCountScan',
-    'targetForRelease',
-    'dbID',
-    'dbType',
-    'viewScan',
-    'params_shimGroup',
-    'params_biasGroup',
-    'seFieldMapGroup',
-    'params_geFieldMapGroup',
-    'dbDesc',
-    'params_peDirection',
-    'params_readoutDirection',
-    'params_eprimeScriptNum',
-    'scanOrder',
-    'scanComplete' ]
+def csvOrder( outputMap ):
+    if outputMap == "all":
+        order = [
+            'sessionDay',
+            'startTime',
+            'scan_ID',
+            'scan_type',
+            'series_description',
+            'quality',
+            'subjectSessionNum',
+            'releaseCountScan',
+            'targetForRelease',
+            'dbID',
+            'dbType',
+            'viewScan',
+            'params_shimGroup',
+            'params_biasGroup',
+            'seFieldMapGroup',
+            'params_geFieldMapGroup',
+            'dbDesc',
+            'params_peDirection',
+            'params_readoutDirection',
+            'params_eprimeScriptNum',
+            'scanOrder',
+            'scanComplete' ]
+    elif outputMap == "release":
+        order = [
+            'sessionDay',
+            'startTime',
+            'dbID',
+            'dbType',
+            'dbDesc',
+            'quality',
+            'scanComplete',
+            'params_shimGroup',
+            'params_biasGroup',
+            'seFieldMapGroup',
+            'params_geFieldMapGroup',
+            'params_peDirection',
+            'params_readoutDirection',
+            'params_eprimeScriptNum',
+            'scanOrder' ]
+    elif outputMap == "package":
+        order = [
+            'sessionLabel',
+            'series_description',
+            'dbDesc',
+            'targetForRelease',
+            'scanComplete' ]
+    else:
+        order = None
+    return order
+
+def extractDict( d, keys ):
+    return dict( (k, d[k]) for k in keys if k in d )
+
+def scanIsPackage( scanName ):
+    if scanName is None:
+        return None
+    filterPackages = [
+        '^T1w_MPR\d+$',
+        '^T2w_SPC\d+$',
+        'rfMRI_REST\d+_(RL|LR)$',
+        'tfMRI_WM_(RL|LR)$',
+        'tfMRI_GAMBLING_(RL|LR)$',
+        'tfMRI_MOTOR_(RL|LR)$',
+        'tfMRI_LANGUAGE_(RL|LR)$',
+        'tfMRI_SOCIAL_(RL|LR)$',
+        'tfMRI_RELATIONAL_(RL|LR)$',
+        'tfMRI_EMOTION_(RL|LR)$',
+        'DWI_dir9(5|6|7)_(RL|LR)$' ]
+    # Create a regular expression search object
+    searchRegex = re.compile( '|'.join(filterPackages) )
+    # If the Series Name matches any of the Functional Package names
+    reMatch = re.search( searchRegex, scanName )
+    return reMatch
 
 seriesLabels = dict(
+    sessionLabel = "Session Label",
     sessionDay = "Session Day",
     startTime = "Acquisition Time",
     scan_ID = "IDB_scan",

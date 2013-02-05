@@ -10,7 +10,7 @@ from lxml import etree
 from sys import exit
 from operator import itemgetter, attrgetter
 import argparse
-from seriesDetails import seriesDetails, csvOrder, seriesLabels
+from seriesDetails import seriesDetails, csvOrder, seriesLabels, extractDict, scanIsPackage
 # TODO Will be switching to 'ConfigParser' for config file
 # If you have an object x, and a file object f that's been opened for writing, the simplest way to pickle the object is:
 # pickle.dump(x, f)
@@ -36,6 +36,7 @@ parser.add_argument("-p", "--password", dest="restPass", type=str, help="passwor
 parser.add_argument("-P", "--project", dest="Project", default="HCP_Phase2", type=str, help="specify project")
 parser.add_argument("-S", "--subject", dest="Subject", type=str, help="specify subject of interest")
 parser.add_argument("-D", "--destination_dir", dest="destDir", default='/tmp', type=str, help="specify the directory for output")
+parser.add_argument("-M", "--output_map", dest="outputMap", default='all', type=str, help="specify the output mapping: all, public, package")
 parser.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true", help="show more verbose output")
 parser.add_argument('--version', action='version', version='%(prog)s: v0.1')
 
@@ -140,6 +141,7 @@ for experiment in experimentResults:
     for element in root.iterfind(".//" + xnatNS + "scan[@ID]"):
         # Create an empty seriesDetails record
         currentSeries = seriesDetails()
+        currentSeries.sessionLabel = experiment['label']
         currentSeries.sessionDate = experiment['date']
         currentSeries.fromScanXML( element )
         # Add the current series to the end of the list
@@ -155,25 +157,33 @@ for experiment in experimentResults:
 experimentResults.sort( key=itemgetter('subjectSessionNum') )
 
 # Name the CSV file by the Subject name
-csvFile = args.destDir + os.sep + args.Subject + ".csv"
+csvFile = args.destDir + os.sep + args.Subject + "_" + args.outputMap + ".csv"
 # Create an empty Series Notes object.  This can be populated with field specific notes for each Experiment
 seriesNotes = seriesDetails()
 # Open the CSV file for write/binary
 with open( csvFile, 'wb' ) as f:
     # Create a CSV Writer for dictionary formatted objects.  Give it the Dictionary order for output.
-    csvWriter = csv.DictWriter( f, csvOrder )
+    csvWriter = csv.DictWriter( f, csvOrder( args.outputMap ) )
     # Write out the series labels as a Header
-    csvWriter.writerow( seriesLabels )
+    rowHeaders = extractDict( seriesLabels, csvOrder(args.outputMap) )
+    csvWriter.writerow( rowHeaders )
     # Loop over all experiment results
     for experiment in experimentResults:
         # Populate the Series Notes for this Experiment with the Experiment Date and Label
-        seriesNotes.startTime = experiment['date']
         seriesNotes.scan_ID = experiment['label']
-        # Write out the notes
-        csvWriter.writerow( seriesNotes.asDictionary() )
+        # Populate the experiment date except on release data
+        #if args.outputMap != "release":
+        seriesNotes.startTime = experiment['date']
+        # Write out the notes only on 'all' #except for on packages
+        if args.outputMap == "all":
+            csvWriter.writerow( seriesNotes.asDictionary(args.outputMap) )
         # Loop over all scans in each experiment
         for scan in experiment['seriesList']:
-            # Write each scan by converting it to
-            csvWriter.writerow( scan.asDictionary() )
+            # Write each scan by converting it to a Dictionary and pulling the relevant Mapping subset
+            nextRow = scan.asDictionary(args.outputMap)
+            if args.outputMap == "all" or \
+               (args.outputMap == "release" and scan.targetForRelease == "1") or \
+               (args.outputMap == "package" and scanIsPackage(scan.dbDesc)):
+                csvWriter.writerow( nextRow )
 
 print "Subject details written to: " + csvFile
