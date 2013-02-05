@@ -4,19 +4,13 @@ __author__ = 'mhouse01'
 import requests
 import json
 import os
-from datetime import datetime
 import csv
 from lxml import etree
 from sys import exit
 from operator import itemgetter, attrgetter
 import argparse
-from seriesDetails import seriesDetails, csvOrder, seriesLabels, extractDict, scanIsPackage
-# TODO Will be switching to 'ConfigParser' for config file
-# If you have an object x, and a file object f that's been opened for writing, the simplest way to pickle the object is:
-# pickle.dump(x, f)
-# To unpickle the object again, if f is a file object which has been opened for reading:
-# x = pickle.load(f)
-from Matt_PW import importUsername, importPassword
+import ConfigParser
+from seriesDetails import seriesDetails, csvOrder, seriesLabels, scanIsPackage
 
 # Declare the XNAT Namespace for use in XML parsing
 xnatNS = "{http://nrg.wustl.edu/xnat}"
@@ -28,11 +22,7 @@ jsonFormat = {'format': 'json'}
 #===============================================================================
 parser = argparse.ArgumentParser(description="Alpha program to pull Subject session parameters from XNAT for verification")
 
-parser.add_argument("-W", "--server", dest="restServerName", default="intradb.humanconnectome.org", type=str, help="specify which server to connect to")
-parser.add_argument("-i", "--insecure", dest="restSecurity", default=True, action="store_false", help="specify whether to use security")
 parser.add_argument("-c", "--config", dest="configFile", default="validate_hcp_release.cfg", type=str, help="config file must be specified")
-parser.add_argument("-u", "--username", dest="restUser", type=str, help="username must be specified")
-parser.add_argument("-p", "--password", dest="restPass", type=str, help="password must be specified")
 parser.add_argument("-P", "--project", dest="Project", default="HCP_Phase2", type=str, help="specify project")
 parser.add_argument("-S", "--subject", dest="Subject", type=str, help="specify subject of interest")
 parser.add_argument("-D", "--destination_dir", dest="destDir", default='/tmp', type=str, help="specify the directory for output")
@@ -43,21 +33,20 @@ parser.add_argument('--version', action='version', version='%(prog)s: v0.1')
 args = parser.parse_args()
 args.destDir = os.path.normpath( args.destDir )
 
-#restServerName = args.restServerName
-#restSecurity = args.restSecurity
-# TODO Need to switch back to command line arguments
+config = ConfigParser.ConfigParser()
+config.read( args.configFile )
 
-username = importUsername
-#username = args.restUser
-password = importPassword
-#password = args.restPass
+username = config.get('Credentials', 'username')
+password = config.get('Credentials', 'password')
+restServerName = config.get('Server', 'server')
+restSecurity = config.getboolean('Server', 'security')
 
-if args.restSecurity:
+if restSecurity:
     print "Using only secure connections"
-    restRoot = "https://" + args.restServerName
+    restRoot = "https://" + restServerName
 else:
     print "Security turned off for all connections"
-    restRoot = "http://" + args.restServerName + ":8080"
+    restRoot = "http://" + restServerName + ":8080"
 
 # If we find an OS certificate bundle, use it instead of the built-in bundle
 if requests.utils.get_os_ca_bundle_path() and args.restSecurity:
@@ -141,6 +130,8 @@ for experiment in experimentResults:
     for element in root.iterfind(".//" + xnatNS + "scan[@ID]"):
         # Create an empty seriesDetails record
         currentSeries = seriesDetails()
+        #Record some basic experiment level info in each scan
+        currentSeries.subjectName = args.Subject
         currentSeries.sessionLabel = experiment['label']
         currentSeries.sessionDate = experiment['date']
         currentSeries.fromScanXML( element )
@@ -165,22 +156,20 @@ with open( csvFile, 'wb' ) as f:
     # Create a CSV Writer for dictionary formatted objects.  Give it the Dictionary order for output.
     csvWriter = csv.DictWriter( f, csvOrder( args.outputMap ) )
     # Write out the series labels as a Header
-    rowHeaders = extractDict( seriesLabels, csvOrder(args.outputMap) )
-    csvWriter.writerow( rowHeaders )
+    csvWriter.writerow( seriesLabels(args.outputMap) )
     # Loop over all experiment results
     for experiment in experimentResults:
         # Populate the Series Notes for this Experiment with the Experiment Date and Label
         seriesNotes.scan_ID = experiment['label']
-        # Populate the experiment date except on release data
-        #if args.outputMap != "release":
         seriesNotes.startTime = experiment['date']
-        # Write out the notes only on 'all' #except for on packages
+        # Write out the notes only on 'all' maps
         if args.outputMap == "all":
             csvWriter.writerow( seriesNotes.asDictionary(args.outputMap) )
         # Loop over all scans in each experiment
         for scan in experiment['seriesList']:
             # Write each scan by converting it to a Dictionary and pulling the relevant Mapping subset
             nextRow = scan.asDictionary(args.outputMap)
+            # But only if this row should be included
             if args.outputMap == "all" or \
                (args.outputMap == "release" and scan.targetForRelease == "1") or \
                (args.outputMap == "package" and scanIsPackage(scan.dbDesc)):

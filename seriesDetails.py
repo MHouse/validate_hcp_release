@@ -17,6 +17,7 @@ def numberToYN( numberYN ):
 class seriesDetails:
     """A simple class to store information about a scan series"""
     def __init__(self):
+        self.subjectName = None
         self.sessionLabel = None
         self.sessionDate = None
         self.sessionDay = None
@@ -95,6 +96,7 @@ class seriesDetails:
 
     def asDictionary(self, outputMap = 'all'):
         detailsDict = dict(
+            subjectName = self.subjectName,
             sessionLabel = self.sessionLabel,
             sessionDay = self.sessionDay,
             startTime = self.startTime,
@@ -142,6 +144,34 @@ class seriesDetails:
         # Extract a dictionary that matches the specified Output Mapping and return it
         return extractDict( detailsDict, csvOrder(outputMap) )
 
+def seriesLabels( outputMap ):
+    labelsDict = dict(
+        subjectName = "Subject Name",
+        sessionLabel = "Session Label",
+        sessionDay = "Session Day",
+        startTime = "Acquisition Time",
+        scan_ID = "IDB_scan",
+        scan_type = "IDB_Type",
+        series_description = "IDB_Description",
+        quality = "Usability",
+        subjectSessionNum = "Session",
+        releaseCountScan = "CountScan",
+        targetForRelease = "Release",
+        dbID = "CDB_scan",
+        dbType = "CDB_Type",
+        viewScan = "View",
+        params_shimGroup = "Shim Group",
+        params_biasGroup = "BiasField group",
+        seFieldMapGroup = "SE_FieldMap group",
+        params_geFieldMapGroup = "GE_FieldMap group",
+        dbDesc = "CDB_Description",
+        params_peDirection = "PE Direction",
+        params_readoutDirection = "Readout Direction",
+        params_eprimeScriptNum = "E-Prime Script",
+        scanOrder = "Scan Order",
+        scanComplete = "Scan Complete" )
+    return extractDict( labelsDict, csvOrder(outputMap) )
+
 def csvOrder( outputMap ):
     if outputMap == "all":
         order = [
@@ -186,11 +216,9 @@ def csvOrder( outputMap ):
             'scanOrder' ]
     elif outputMap == "package":
         order = [
-            'sessionLabel',
+            'subjectName',
             'series_description',
-            'dbDesc',
-            'targetForRelease',
-            'scanComplete' ]
+            'dbDesc' ]
     else:
         order = None
     return order
@@ -202,8 +230,6 @@ def scanIsPackage( scanName ):
     if scanName is None:
         return None
     filterPackages = [
-        '^T1w_MPR\d+$',
-        '^T2w_SPC\d+$',
         'rfMRI_REST\d+_(RL|LR)$',
         'tfMRI_WM_(RL|LR)$',
         'tfMRI_GAMBLING_(RL|LR)$',
@@ -211,35 +237,10 @@ def scanIsPackage( scanName ):
         'tfMRI_LANGUAGE_(RL|LR)$',
         'tfMRI_SOCIAL_(RL|LR)$',
         'tfMRI_RELATIONAL_(RL|LR)$',
-        'tfMRI_EMOTION_(RL|LR)$',
-        'DWI_dir9(5|6|7)_(RL|LR)$' ]
+        'tfMRI_EMOTION_(RL|LR)$' ]
     # Create a regular expression search object
     searchRegex = re.compile( '|'.join(filterPackages) )
     # If the Series Name matches any of the Functional Package names
     reMatch = re.search( searchRegex, scanName )
     return reMatch
 
-seriesLabels = dict(
-    sessionLabel = "Session Label",
-    sessionDay = "Session Day",
-    startTime = "Acquisition Time",
-    scan_ID = "IDB_scan",
-    scan_type = "IDB_Type",
-    series_description = "IDB_Description",
-    quality = "Usability",
-    subjectSessionNum = "Session",
-    releaseCountScan = "CountScan",
-    targetForRelease = "Release",
-    dbID = "CDB_scan",
-    dbType = "CDB_Type",
-    viewScan = "View",
-    params_shimGroup = "Shim Group",
-    params_biasGroup = "BiasField group",
-    seFieldMapGroup = "SE_FieldMap group",
-    params_geFieldMapGroup = "GE_FieldMap group",
-    dbDesc = "CDB_Description",
-    params_peDirection = "PE Direction",
-    params_readoutDirection = "Readout Direction",
-    params_eprimeScriptNum = "E-Prime Script",
-    scanOrder = "Scan Order",
-    scanComplete = "Scan Complete" )

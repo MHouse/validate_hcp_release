@@ -2,7 +2,7 @@
 __author__ = 'mhouse01'
 import ConfigParser
 
-config = ConfigParser.RawConfigParser()
+config = ConfigParser.ConfigParser()
 
 # When adding sections or items, add them in the reverse order of
 # how you want them to be displayed in the actual file.
@@ -17,7 +17,7 @@ config.set('Credentials', 'password', 'pass_example')
 
 config.add_section('Server')
 config.set('Server', 'server', 'server.domain.org')
-config.set('Server', 'insecure', 'false')
+config.set('Server', 'security', 'off')
 
 # Writing our configuration file to 'validate_hcp_release.cfg'
 with open('validate_hcp_release.cfg', 'wb') as configfile:
