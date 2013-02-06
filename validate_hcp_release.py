@@ -52,7 +52,7 @@ else:
     restRoot = "http://" + restServerName + ":8080"
 
 # If we find an OS certificate bundle, use it instead of the built-in bundle
-if requests.utils.get_os_ca_bundle_path() and args.restSecurity:
+if requests.utils.get_os_ca_bundle_path() and restSecurity:
     os.environ['REQUESTS_CA_BUNDLE'] = requests.utils.get_os_ca_bundle_path()
     print "Using CA Bundle: %s" % requests.utils.DEFAULT_CA_BUNDLE_PATH
 
