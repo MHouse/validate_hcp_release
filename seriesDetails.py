@@ -209,7 +209,6 @@ def csvOrder( outputMap ):
             'scanOrder' ]
     elif outputMap == "package":
         order = [
-            'subjectName',
             'series_description',
             'dbDesc' ]
     else:
