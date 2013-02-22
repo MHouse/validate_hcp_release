@@ -2,7 +2,7 @@ __author__ = 'mhouse01'
 
 import lxml
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 xnatNS = "{http://nrg.wustl.edu/xnat}"
 
 def extractDict( d, keys ):
@@ -123,6 +123,9 @@ class seriesDetails:
         self.pctPairComplete = element.findtext(".//" + xnatNS + "pctPairComplete")
         #dataRelease = "Data Release"
         self.dataRelease = element.findtext(".//" + xnatNS + "dataRelease")
+        #Correct DateTime for ConnectomeDB Sorting by off-setting with the Session Number
+        if self.sessionDate == "2013-01-01":
+            self.DateTime = self.DateTime + timedelta( days=(int(self.subjectSessionNum)-1) )
 
     def asDictionary(self, outputMap = 'all'):
         detailsDict = dict(
@@ -209,10 +212,9 @@ def csvOrder( outputMap ):
             'sessionDay',
             'startTime',
             'subjectSessionNum',
-            'dbID',
-            'dbType',
-            'dbDesc',
-            'quality',
+            'scan_ID',
+            'scan_type',
+            'series_description',
             'params_shimGroup',
             'params_biasGroup',
             'seFieldMapGroup',
@@ -239,9 +241,9 @@ def seriesLabels( outputMap ):
         sessionLabel = "Session Label",
         sessionDay = "Session Day",
         startTime = "Acquisition Time",
-        scan_ID = "IDB_scan",
-        scan_type = "IDB_Type",
-        series_description = "IDB_Description",
+        scan_ID = "Scan Number",
+        scan_type = "Scan Type",
+        series_description = "Scan Description",
         quality = "Usability",
         subjectSessionNum = "Session",
         releaseCountScan = "CountScan",

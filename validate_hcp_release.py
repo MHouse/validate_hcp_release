@@ -124,7 +124,7 @@ for experiment in experimentResults:
     # Parse the XML result into an Element Tree
     root = etree.fromstring(r.text.encode(r.encoding))
     # Extract the Study Date for the session
-    if experiment['date'] == None:
+    if experiment['date'] == "":
         experiment['date'] = "2013-01-01"
     print "Assuming study date of " + experiment['date']
 
@@ -177,8 +177,9 @@ with open( csvFile, 'wb' ) as f:
             nextRow = scan.asDictionary(args.outputMap)
             # But only if this row should be included
             if args.outputMap == "all" or \
-               (args.outputMap == "release" and scan.targetForRelease == "1") or \
-               (args.outputMap == "package" and scanIsPackage(scan.dbDesc)):
+                (args.outputMap == "release" and scan.targetForRelease == "1") or \
+                (args.outputMap == "release" and restServerName == "hcpx-demo.humanconnectome.org") or \
+                (args.outputMap == "package" and scanIsPackage(scan.dbDesc)):
                 csvWriter.writerow( nextRow )
 
 print "Subject details written to: " + csvFile
