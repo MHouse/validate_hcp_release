@@ -124,6 +124,8 @@ for experiment in experimentResults:
     # Parse the XML result into an Element Tree
     root = etree.fromstring(r.text.encode(r.encoding))
     # Extract the Study Date for the session
+    if experiment['date'] == None:
+        experiment['date'] = "2013-01-01"
     print "Assuming study date of " + experiment['date']
 
     # Start with an empty series list
