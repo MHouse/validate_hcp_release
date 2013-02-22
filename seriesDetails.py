@@ -64,6 +64,9 @@ class seriesDetails:
         self.params_eprimeScriptNum = None
         self.scanOrder = None
         self.scanComplete = None
+        self.pctComplete = None
+        self.pctPairComplete = None
+        self.dataRelease = None
     def __repr__(self):
         return "<scan_ID:%s series_description:%s>" % (self.scan_ID, self.series_description)
 
@@ -112,8 +115,14 @@ class seriesDetails:
         self.params_eprimeScriptNum = element.findtext(".//" + xnatNS + "eprimeScriptNum")
         #scanOrder = "Scan Order"
         self.scanOrder = element.findtext(".//" + xnatNS + "scanOrder")
-        #scanOrder = "Scan Order"
+        #scanComplete = "Scan Complete"
         self.scanComplete = element.findtext(".//" + xnatNS + "scanComplete")
+        #pctComplete = "Percent Complete"
+        self.pctComplete = element.findtext(".//" + xnatNS + "pctComplete")
+        #pctPairComplete = "Percent Pair Complete"
+        self.pctPairComplete = element.findtext(".//" + xnatNS + "pctPairComplete")
+        #dataRelease = "Data Release"
+        self.dataRelease = element.findtext(".//" + xnatNS + "dataRelease")
 
     def asDictionary(self, outputMap = 'all'):
         detailsDict = dict(
@@ -140,7 +149,10 @@ class seriesDetails:
             params_readoutDirection = self.params_readoutDirection,
             params_eprimeScriptNum = self.params_eprimeScriptNum,
             scanOrder = self.scanOrder,
-            scanComplete = self.scanComplete )
+            scanComplete = self.scanComplete,
+            pctComplete = self.pctComplete,
+            pctPairComplete = self.pctPairComplete,
+            dataRelease = self.dataRelease )
         # Handle some additional formatting
         if detailsDict.get('quality') == "usable" or detailsDict.get('quality') == "undetermined":
             detailsDict['quality'] = None
@@ -189,16 +201,18 @@ def csvOrder( outputMap ):
             'params_readoutDirection',
             'params_eprimeScriptNum',
             'scanOrder',
-            'scanComplete' ]
+            'scanComplete',
+            'pctComplete',
+            'pctPairComplete' ]
     elif outputMap == "release":
         order = [
             'sessionDay',
             'startTime',
+            'subjectSessionNum',
             'dbID',
             'dbType',
             'dbDesc',
             'quality',
-            'scanComplete',
             'params_shimGroup',
             'params_biasGroup',
             'seFieldMapGroup',
@@ -206,7 +220,10 @@ def csvOrder( outputMap ):
             'params_peDirection',
             'params_readoutDirection',
             'params_eprimeScriptNum',
-            'scanOrder' ]
+            'scanOrder',
+            'scanComplete',
+            'pctComplete',
+            'pctPairComplete' ]
     elif outputMap == "package":
         order = [
             'sessionLabel',
@@ -241,5 +258,8 @@ def seriesLabels( outputMap ):
         params_readoutDirection = "Readout Direction",
         params_eprimeScriptNum = "E-Prime Script",
         scanOrder = "Scan Order",
-        scanComplete = "Scan Complete" )
+        scanComplete = "Scan Complete",
+        pctComplete = "Percent Complete",
+        pctPairComplete = "Percent Pair Complete",
+        dataRelease = "Data Release" )
     return extractDict( labelsDict, csvOrder(outputMap) )
